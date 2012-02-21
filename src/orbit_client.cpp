@@ -55,7 +55,6 @@
 
 #include "boost/filesystem.hpp"   // includes all needed Boost.Filesystem declarations
 
-#include <qbo_arduqbo/Nariz.h>
 
 cv::Ptr<Orbit> orbit;
 

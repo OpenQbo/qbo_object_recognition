@@ -13,7 +13,6 @@
   <depend package="cv_bridge"/>
   <depend package="sensor_msgs"/>
   <depend package="qbo_talk"/>
-  <depend package="qbo_arduqbo"/>
   <depend package="qbo_listen"/>
   <depend package="std_msgs"/>
   <depend package="qbo_self_recognizer"/>
