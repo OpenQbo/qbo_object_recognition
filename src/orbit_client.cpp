@@ -507,8 +507,8 @@ bool teachService(qbo_object_recognition::Teach::Request  &req, qbo_object_recog
 		{
 			if (boost::filesystem::is_directory(itr->status()))
 			{
-				std::string object_name=itr->path().filename();
-				boost::filesystem::remove_all(new_objects_path+"/"+object_name);
+				std::string object_name=itr->path().filename().string();
+				boost::filesystem::remove(new_objects_path+"/"+object_name);
 
 			}
 		}
