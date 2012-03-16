@@ -34,7 +34,6 @@
 #include <cxmisc.h>
 #include <stdio.h>
 #include <cxcore.h>
-#include <cxtypes.h>
 #include <climits>
 
 #include "Orbit.h"
