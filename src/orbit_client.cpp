@@ -605,7 +605,7 @@ int main(int argc, char **argv)
 //	string default_init_path = "/opt/qbo_learn/orbit_db";
 	string default_init_path = "/opt/qbo_learn/orbit/orbit_store/";
 //	string default_input_image_topic = "/stereo_selector/object_image";
-	string default_input_image_topic = "/stereo_selector/object_image";
+	string default_input_image_topic = "/qbo_stereo_selector/object";
 
 
 
