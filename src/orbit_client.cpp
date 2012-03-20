@@ -39,6 +39,7 @@
 #include "Orbit.h"
 
 #include <ros/ros.h>
+#include <ros/package.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
@@ -53,6 +54,8 @@
 #include "qbo_object_recognition/RecognizeObjectInputImage.h"
 
 #include "boost/filesystem.hpp"   // includes all needed Boost.Filesystem declarations
+
+
 
 
 cv::Ptr<Orbit> orbit;
@@ -599,13 +602,25 @@ int main(int argc, char **argv)
 
 	ros::NodeHandle private_nh_;
 
-	string default_new_objects_path ="/opt/qbo_learn/orbit/new_objects";
-	string default_update_path = "/opt/qbo_learn/orbit/orbit_store";
+	string base_objects_path = ros::package::getPath("qbo_object_recognition")+"/objects";
+
+	if(!boost::filesystem::is_directory(base_objects_path))
+		boost::filesystem::create_directory(base_objects_path);
+ 
+        if(!boost::filesystem::is_directory(base_objects_path+"/objects_db"))
+		boost::filesystem::create_directory(base_objects_path+"/objects_db");
+
+        if(!boost::filesystem::is_directory(base_objects_path+"/new_objects"))
+		boost::filesystem::create_directory(base_objects_path+"/new_objects");
+
+	string default_new_objects_path =base_objects_path + "/new_objects";
+	string default_init_path = base_objects_path + "/objects_db";
+
+	string default_update_path = default_init_path;
 //	string default_init_path = "/opt/qbo_learn/orbit_db";
-	string default_init_path = "/opt/qbo_learn/orbit/orbit_store/";
+
 //	string default_input_image_topic = "/stereo_selector/object_image";
 	string default_input_image_topic = "/qbo_stereo_selector/object";
-
 
 
 	double default_certainty_threshold = 0.26;
