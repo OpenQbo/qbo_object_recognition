@@ -165,7 +165,7 @@ bool forget_object(string object_name)
 	else
 	{
 
-		boost::filesystem::remove(object_to_forget_path);
+		boost::filesystem::remove_all(object_to_forget_path);
 
 		if(boost::filesystem::is_regular_file(objects_path+"/vocabulary.xml.gz"))
 			boost::filesystem::remove(objects_path+"/vocabulary.xml.gz");

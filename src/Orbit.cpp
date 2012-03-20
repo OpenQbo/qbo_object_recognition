@@ -293,7 +293,7 @@ int Orbit::loadOrbit(string load_path)
 int Orbit::storeOrbit(string save_path, string objects_folder_name)
 {
 
-	boost::filesystem::remove(save_path+"/"+objects_folder_name+"/");
+	boost::filesystem::remove_all(save_path+"/"+objects_folder_name+"/");
 
 	string objects_path = save_path+"/"+objects_folder_name;
 
