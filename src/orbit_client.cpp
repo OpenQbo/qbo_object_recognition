@@ -639,7 +639,7 @@ int main(int argc, char **argv)
 
 	image_sub_=private_nh_.subscribe<sensor_msgs::Image>(input_image_topic,1,&stereoSelectorCallback);
 
-	client_talker = private_nh_.serviceClient<qbo_talk::Text2Speach>("/Qbo/festivalSay");
+	client_talker = private_nh_.serviceClient<qbo_talk::Text2Speach>("/qbo_talk/festival_say_no_wait");
 
 	//Advertise Services
 	service_= private_nh_.advertiseService("qbo_object_recognition/learn", learnNewObjectService);
