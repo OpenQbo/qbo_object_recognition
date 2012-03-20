@@ -1,8 +1,5 @@
 <launch>
 
-<machine name="qbo" address="qbobot-desktop" ros-root="$(env ROS_ROOT)" 
-ros-package-path="/opt/qbo/ros_stacks/urdf_tools:/opt/qbo/ros_stacks/pca:/opt/qbo/ros_stacks/qbo_web:/opt/qbo/ros_stacks/qbo_launchers:/opt/qbo/ros_stacks/qbo_apps:/opt/qbo/ros_stacks/qbopy:/opt/qbo/ros_stacks/thecorpora_drivers:/opt/qbo/ros_stacks/qbo_drivers:/opt/qbo/ros_stacks:/opt/ros/diamondback/stacks" 
-user="qbobot" password="debbie"  default="false"/>
 
 	 <node name="qbo_stereo_selector" pkg="qbo_stereo_selector" type="qbo_stereo_selector">
 <param name="distance_filter_threshold" value="0.8" /> 
@@ -20,11 +17,11 @@ user="qbobot" password="debbie"  default="false"/>
 	 </node>
 
 	 
-	 <node name="orbit_client" pkg="object_recognizer" type="orbit_client" output="screen">
+	 <node name="orbit_client" pkg="qbo_object_recognition" type="orbit_client" output="screen">
 	 </node>
-	<param name="/object_recognizer/input_image_topic" value="/qbo_stereo_selector/object"/> 
+	<param name="/qbo_object_recognition/input_image_topic" value="/qbo_stereo_selector/object"/> 
 	 
-	 <node name="orbit_demo" pkg="object_recognizer" type="orbit_demo" output="screen">
+	 <node name="orbit_demo" pkg="qbo_object_recognition" type="orbit_demo" output="screen">
 	 </node>
 
 
