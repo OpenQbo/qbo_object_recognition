@@ -88,7 +88,7 @@ ros::Time last_object_received_;
 bool learn_request = false;
 string object_to_learn = "";
 
-string objects_path = "/opt/qbo_learn/orbit/orbit_store/";
+string objects_path = "/opt/ros/electric/stacks/qbo_stack/qbo_object_recognition/objects/objects_db/";
 
 void speak_this(string to_speak)
 {
