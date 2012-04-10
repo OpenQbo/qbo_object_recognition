@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (GPLv2 License)
  * 
- * Copyright (c) 2011 OpenQbo, Inc.
+ * Copyright (c) 2011 Thecorpora, S.L.
  *
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License as 
@@ -29,5 +29,4 @@ OrbitObject::OrbitObject(string name) {
 }
 
 OrbitObject::~OrbitObject() {
-	// TODO Auto-generated destructor stub
 }
