@@ -1073,6 +1073,10 @@ int Orbit::teachOrbit(string update_path)
 	num_img = loadAllObjectsImages();
 	printf("%d images loaded from data base!\n", num_img);
 
+    string time_now;
+    stringstream out;
+    out << time(NULL);
+    time_now = out.str();
 
 	for(unsigned int i = 0; i<temp_objects.size();i++) //For each new object
 	{
@@ -1080,7 +1084,6 @@ int Orbit::teachOrbit(string update_path)
 
 		for(unsigned int j = 0; j<objects_.size();j++) //For each database object
 		{
-
 
 
 			if( temp_objects[i].name_.compare(objects_[j].name_) == 0) //If object exists
@@ -1115,13 +1118,16 @@ int Orbit::teachOrbit(string update_path)
 					//Saving descriptors
 					fs << "Descriptors" << objects_[j].descriptors_;
 
+
+
+
 					//Save new images to the data base folder of the object
 					for(unsigned int im = 0; im<temp_objects[i].images_.size();im++)
 					{
 						string filename;
-						stringstream out;
+    						stringstream out;
 
-						out <<objects_[j].images_dir_path_<<"/image_"<<image_index<<".jpg";
+						out <<objects_[j].images_dir_path_<<"/"<<time_now<<"_"<<image_index<<".jpg";
 						filename = out.str();
 
 						vector<int> params;
@@ -1153,7 +1159,7 @@ int Orbit::teachOrbit(string update_path)
 				string filename;
 				stringstream out;
 
-				out<<objects_main_path_+"/"+temp_objects[i].name_<<"/image_"<<image_index<<".jpg";
+				out<<objects_main_path_+"/"+temp_objects[i].name_<<"/"<<time_now<<"_"<<image_index<<".jpg";
 				filename = out.str();
 
 				vector<int> params;
