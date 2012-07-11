@@ -56,8 +56,6 @@
 #include "boost/filesystem.hpp"   // includes all needed Boost.Filesystem declarations
 
 
-
-
 cv::Ptr<Orbit> orbit;
 
 ros::Subscriber image_sub_;
@@ -69,9 +67,6 @@ ros::ServiceClient client_talker;
 qbo_talk::Text2Speach srv_talker;
 
 string recognized_object = "";
-
-
-
 
 vector<cv::Mat> images_from_stereo_selector;
 bool capture_image;
@@ -86,6 +81,8 @@ double max_time_to_recognize;
 double max_time_to_learn;
 int stabilizer_threshold;
 double certainty_threshold;
+
+ros::NodeHandle * private_nh_;
 
 void speak_this(string to_speak)
 {
@@ -181,24 +178,15 @@ bool learnNewObjectService(qbo_object_recognition::LearnNewObject::Request  &req
 
 	ROS_INFO("All Images captured");
 
-
-
-
-
 	if(!boost::filesystem::is_directory(new_objects_path))
 	{
 		//Create the main folder in the save path
 		boost::filesystem::create_directory(new_objects_path);
 	}
 
-
-
-
 	if(!boost::filesystem::is_directory(new_objects_path+"/"+object_name))
 		//Create the object's folder
 		boost::filesystem::create_directory(new_objects_path+"/"+object_name);
-
-
 
 	string time_now;
 	stringstream out;
@@ -335,18 +323,11 @@ bool recognizeWithStabilizerService(qbo_object_recognition::RecognizeObject::Req
 	for(unsigned int i = 0; i<=orbit->objects_.size(); i++)
 		stabilizer[i] = 0;
 
-
-
-
-
-
 	ros::Time t1 = ros::Time::now();
 	ros::Time t2;
 	ros::Duration diff_time;
 
-
 	capture_image = true;
-
 
 	while(1)
 	{
@@ -388,7 +369,6 @@ bool recognizeWithStabilizerService(qbo_object_recognition::RecognizeObject::Req
 			}
 		}
 
-
 		/*
 		 * Print stabilizer
 		 */
@@ -413,7 +393,6 @@ bool recognizeWithStabilizerService(qbo_object_recognition::RecognizeObject::Req
 				max_index = i;
 			}
 		}
-
 
 
 		//Verify max stabilizer value
@@ -458,9 +437,6 @@ bool recognizeWithStabilizerService(qbo_object_recognition::RecognizeObject::Req
 	}
 
 	capture_image = false;
-
-
-
 
 	if(res.recognized)
 	{
@@ -522,8 +498,12 @@ bool teachService(qbo_object_recognition::Teach::Request  &req, qbo_object_recog
 
 bool updateService(qbo_object_recognition::Update::Request  &req, qbo_object_recognition::Update::Response &res )
 {
-
-	int returned = orbit->loadOrbit(update_path);
+    /*
+        Get update path
+    */
+    private_nh_->getParam("/qbo_object_recognition/update_path",update_path);
+	
+    int returned = orbit->loadOrbit(update_path);
 
 	if(returned>=0)
 	{
@@ -598,9 +578,7 @@ int main(int argc, char **argv)
 	prev_fn = signal (SIGINT,terminate_func);
 	if (prev_fn==SIG_IGN) signal (SIGINT,SIG_IGN);
 
-
-
-	ros::NodeHandle private_nh_;
+	private_nh_ = new ros::NodeHandle;
 
 	string base_objects_path = ros::package::getPath("qbo_object_recognition")+"/objects";
 
@@ -625,35 +603,32 @@ int main(int argc, char **argv)
 
 	double default_certainty_threshold = 0.26;
 
-	private_nh_.param("/qbo_object_recognition/num_images_to_capture", num_images_to_capture, 20);
-	private_nh_.param("/qbo_object_recognition/new_object_images_path", new_objects_path, default_new_objects_path);
-	private_nh_.param("/qbo_object_recognition/max_time_to_recognize", max_time_to_recognize, 30.0);
-	private_nh_.param("/qbo_object_recognition/max_time_to_learn", max_time_to_learn,30.0);
-	private_nh_.param("/qbo_object_recognition/update_path", update_path, default_update_path);
-	private_nh_.param("/qbo_object_recognition/init_orbit_path", init_orbit_path, default_init_path);
-	private_nh_.param("/qbo_object_recognition/stabilizer_threshold", stabilizer_threshold, 10);
-	private_nh_.param("/qbo_object_recognition/certainty_threshold", certainty_threshold, default_certainty_threshold);
-	private_nh_.param("/qbo_object_recognition/input_image_topic", input_image_topic, default_input_image_topic);
+	private_nh_->param("/qbo_object_recognition/num_images_to_capture", num_images_to_capture, 20);
+	private_nh_->param("/qbo_object_recognition/new_object_images_path", new_objects_path, default_new_objects_path);
+	private_nh_->param("/qbo_object_recognition/max_time_to_recognize", max_time_to_recognize, 30.0);
+	private_nh_->param("/qbo_object_recognition/max_time_to_learn", max_time_to_learn,30.0);
+	private_nh_->param("/qbo_object_recognition/update_path", update_path, default_update_path);
+	private_nh_->param("/qbo_object_recognition/init_orbit_path", init_orbit_path, default_init_path);
+	private_nh_->param("/qbo_object_recognition/stabilizer_threshold", stabilizer_threshold, 10);
+	private_nh_->param("/qbo_object_recognition/certainty_threshold", certainty_threshold, default_certainty_threshold);
+	private_nh_->param("/qbo_object_recognition/input_image_topic", input_image_topic, default_input_image_topic);
 
 	ros::ServiceServer service_, service2_, service3_, service4_, service5_, service6_;
 
-	image_sub_=private_nh_.subscribe<sensor_msgs::Image>(input_image_topic,1,&stereoSelectorCallback);
+	image_sub_=private_nh_->subscribe<sensor_msgs::Image>(input_image_topic,1,&stereoSelectorCallback);
 
-	client_talker = private_nh_.serviceClient<qbo_talk::Text2Speach>("/qbo_talk/festival_say_no_wait");
+	client_talker = private_nh_->serviceClient<qbo_talk::Text2Speach>("/qbo_talk/festival_say_no_wait");
 
 	//Advertise Services
-	service_= private_nh_.advertiseService("qbo_object_recognition/learn", learnNewObjectService);
-	service2_= private_nh_.advertiseService("qbo_object_recognition/recognize", recognizeObjectService);
-	service3_= private_nh_.advertiseService("qbo_object_recognition/update", updateService);
-	service4_= private_nh_.advertiseService("qbo_object_recognition/teach", teachService);
-	service5_= private_nh_.advertiseService("qbo_object_recognition/recognize_with_stabilizer", recognizeWithStabilizerService);
-	service6_= private_nh_.advertiseService("qbo_object_recognition/recognize_input_image", recognizeInputImageService);
+	service_= private_nh_->advertiseService("qbo_object_recognition/learn", learnNewObjectService);
+	service2_= private_nh_->advertiseService("qbo_object_recognition/recognize", recognizeObjectService);
+	service3_= private_nh_->advertiseService("qbo_object_recognition/update", updateService);
+	service4_= private_nh_->advertiseService("qbo_object_recognition/teach", teachService);
+	service5_= private_nh_->advertiseService("qbo_object_recognition/recognize_with_stabilizer", recognizeWithStabilizerService);
+	service6_= private_nh_->advertiseService("qbo_object_recognition/recognize_input_image", recognizeInputImageService);
 
 
 	capture_image = false;
-
-
-
 
 	//Building orbit
 	ROS_INFO("Creating Orbit...");
