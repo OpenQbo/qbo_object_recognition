@@ -248,13 +248,13 @@ int Orbit::prepareOrbit(RECOGNITION_TYPE type)
 			int num_img = loadAllObjectsImages();
 			printf("Objects' images loaded: %d!\n", num_img);
 
-
-			printf("\nLoading objects' descriptors...\n");
-			loadAllObjectsDescriptors();
-			printf("Objects' descriptors loaded!\n");
-
 			if(objects_.size()>=2)
 			{
+
+                printf("\nLoading objects' descriptors...\n");
+                loadAllObjectsDescriptors();
+                printf("Objects' descriptors loaded!\n");
+
 				printf("\nTraining Vocabulary\n");
 				trainVocabulary();
 				printf("Vocabulary trained and stored in %s!\n", objects_main_path_.c_str());
@@ -283,6 +283,8 @@ int Orbit::loadOrbit(string load_path)
 
 	printf("\nLoading names from %s...\n", load_path.c_str());
 
+    objects_main_path_=load_path; 
+        
 	prepareOrbit(recog_type_);
 
 
