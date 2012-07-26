@@ -164,7 +164,6 @@ bool forget_object(string object_name)
 
 	else
 	{
-
 		boost::filesystem::remove_all(object_to_forget_path);
 
 		if(boost::filesystem::is_regular_file(objects_path+"/vocabulary.xml.gz"))
@@ -457,8 +456,6 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
 		}
 	}
 }
-
-
 
 int main(int argc, char **argv)
 {

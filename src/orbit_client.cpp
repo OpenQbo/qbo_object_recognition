@@ -421,7 +421,7 @@ bool recognizeWithStabilizerService(qbo_object_recognition::RecognizeObject::Req
 		if(diff_time.toSec()>2*max_time_to_recognize)
 			break;
 
-
+		/*
 		if((diff_time.sec+1)%15 == 0)
 		{
 
@@ -434,6 +434,7 @@ bool recognizeWithStabilizerService(qbo_object_recognition::RecognizeObject::Req
 			speak_this("It seems quite familiar");
 			cv::waitKey(1500);
 		}
+		*/
 	}
 
 	capture_image = false;
