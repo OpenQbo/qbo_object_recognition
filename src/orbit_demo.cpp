@@ -26,6 +26,9 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <fstream>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string/regex.hpp>
 
 #include <cv.h>
 #include <highgui.h>
@@ -38,6 +41,7 @@
 #include "Orbit.h"
 
 #include <ros/ros.h>
+#include <ros/package.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
@@ -58,10 +62,12 @@
 #include <boost/algorithm/string.hpp>
 #include "boost/filesystem.hpp"
 
-
 using namespace std;
 
+map<string, string> dictionary;
+
 ros::Subscriber listener_sub;
+ros::Subscriber system_lang_sub;
 
 ros::ServiceClient client_talker;
 ros::ServiceClient client_self_recognizer;
@@ -70,6 +76,8 @@ qbo_talk::Text2Speach srv_talker;
 qbo_self_recognizer::QboRecognize srv_self_recognize;
 
 string recognized_object = "";
+
+ros::NodeHandle *private_nh_;
 
 ros::ServiceClient client_learn;
 ros::ServiceClient client_recognize;
@@ -90,6 +98,8 @@ string object_to_learn = "";
 
 string objects_path = "/opt/ros/electric/stacks/qbo_stack/qbo_object_recognition/objects/objects_db/";
 
+void listenerCallback(const qbo_listen::ListenedConstPtr& msg);
+
 void speak_this(string to_speak)
 {
 	srv_talker.request.command = to_speak;
@@ -101,6 +111,77 @@ void speak_this(string to_speak)
 }
 
 
+/*
+* Method that loads dictionary from a txt file into the map structure. It receives the language to be loaded
+*/
+int loadDictionary(string lang)
+{
+        string filename = ros::package::getPath("qbo_object_recognition") + "/config/lang/"+lang+".txt";
+
+        string line;
+        ifstream dict_file(filename.c_str());
+        if (dict_file.is_open())
+        {
+                while (dict_file.good())
+                {
+                        getline (dict_file,line);
+                        vector<string> words;
+                        boost::split(words, line, boost::is_any_of("="));
+                        if(words.size()>=2)
+                        {
+                                map<string, string>::iterator it = dictionary.find(words[0]);
+                                if(it != dictionary.end())
+                                        dictionary[words[0]]=words[1];
+                                else
+                                        dictionary.insert(make_pair(words[0], words[1]));
+                        }
+                }
+
+                dict_file.close();
+        }
+        else
+        {
+                ROS_ERROR("Unable to open dictionary file [%s]",lang.c_str());
+                return 1;
+        }
+
+        printf("Printing FULL DICTIONARY:\n");
+
+        map<string,string>::iterator it;
+        for(it=dictionary.begin(); it!=dictionary.end(); it++ )
+        cout << it->first << "=" << it->second << endl;
+
+        string listener_topic = "/listen/"+lang+"_default";
+        listener_sub = private_nh_->subscribe<qbo_listen::Listened>(listener_topic.c_str(),20,&listenerCallback);
+
+        ROS_INFO("Subscribed to topic %s", listener_topic.c_str());
+
+        return 0;
+}
+
+
+/*
+ * System Language callback
+ */
+void system_langCallback(const std_msgs::String::ConstPtr& language)
+{
+        string lang = language->data;
+        ROS_INFO("Changing language to [%s]", language->data.c_str());
+
+        if(lang != "es" && lang!="en")
+        {
+                ROS_ERROR("INVALID LANGUAGE. ONLY ENGLISH AND SPANISH ARE AVAILABLE.");
+                return;
+        }
+
+        ROS_INFO("Loaded dictionary for %s", lang.c_str());
+
+        loadDictionary(lang);
+
+
+}
+
+
 void stereoSelectorCallback(const sensor_msgs::Image::ConstPtr& image_ptr)
 {
 	last_object_received_ = ros::Time::now();
@@ -108,7 +189,6 @@ void stereoSelectorCallback(const sensor_msgs::Image::ConstPtr& image_ptr)
 
 bool self_recognize()
 {
-
 	if (client_self_recognizer.call(srv_self_recognize))
 		return srv_self_recognize.response.recognized;
 	else
@@ -132,9 +212,9 @@ bool learnAndTeach(string object_name)
 	}
 
 	if(object_name == "MYSELF")
-		speak_this("Now I get the picture of how I look. I will train myself.");
+		speak_this(dictionary["NOW I GET THE PICTURE OF HOW I LOOK. I WILL TRAIN MYSELF"]);
 	else
-		speak_this("Now I get the picture of "+object_name+". I will train myself.");
+		speak_this(dictionary["NOW I GET THE PICTURE OF"]+" "+object_name+". "+dictionary["I WILL TRAIN MYSELF"]);
 
 	if (client_teach.call(srv_teach))
 	{
@@ -152,16 +232,15 @@ bool learnAndTeach(string object_name)
 
 bool forget_object(string object_name)
 {
-	speak_this("Forgetting object. "+object_name+".");
+	speak_this(dictionary["FORGETTING OBJECT"]+". "+object_name+".");
 
 	string object_to_forget_path = objects_path+"/"+object_name;
 
 	if(!boost::filesystem::is_directory(object_to_forget_path))
 	{
-		speak_this("Sorry but cannot forget the object. "+object_name+" . I don't know how a "+object_name+" looks like.");
+		speak_this(dictionary["SORRY BUT CANNOT FORGET THE OBJECT"]+". "+object_name+". "+dictionary["I DON'T KNOW ANY"]+" "+object_name);
 		return true;
 	}
-
 	else
 	{
 		boost::filesystem::remove_all(object_to_forget_path);
@@ -169,7 +248,7 @@ bool forget_object(string object_name)
 		if(boost::filesystem::is_regular_file(objects_path+"/vocabulary.xml.gz"))
 			boost::filesystem::remove(objects_path+"/vocabulary.xml.gz");
 
-		speak_this("I am re training myself");
+		speak_this(dictionary["I AM RE TRAINING MYSELF"]);
 
 		if (client_update.call(srv_update))
 		{
@@ -182,7 +261,7 @@ bool forget_object(string object_name)
 			return false;
 		}
 
-		speak_this("OK. I have forgotten object "+object_name);
+		speak_this(dictionary["OK. I HAVE FORGOTTEN OBJECT"]+" "+object_name);
 	}
 
 	return true;
@@ -223,19 +302,16 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
 		speak_this("Ok. Lets do it");
 */
 
-	if(listened == "" and msg->not_msg == "WHAT IS THIS")
-		listened = "WHAT IS THIS";
-	else if(listened == "" and msg->not_msg == "WHAT IS THIS CUBE E O")
-		listened = "WHAT IS THIS";
-	else if(listened == "" and msg->not_msg == "CUBE E O WHAT IS THIS")
-		listened = "WHAT IS THIS";
+	if(listened == "" and msg->not_msg == dictionary["WHAT IS THIS"])
+		listened = dictionary["WHAT IS THIS"];
+	else if(listened == "" and msg->not_msg == dictionary["WHAT IS THIS Q B O"])
+		listened = dictionary["WHAT IS THIS"];
+	else if(listened == "" and msg->not_msg == dictionary["Q B O WHAT IS THIS"])
+		listened = dictionary["WHAT IS THIS"];
+	else if(listened == "" and msg->not_msg == dictionary["Q B O THIS IS YOU"])
+		listened = dictionary["Q B O THIS IS YOU"];
 
-	else if(listened == "" and msg->not_msg == "CUBE E O THIS IS YOU")
-		listened = "CUBE E O THIS IS YOU";
-
-    ROS_INFO("Listened: %s", listened.c_str());
-
-
+	ROS_INFO("Listened: %s", listened.c_str());
 
 	if(time_diff.toSec()>0.3)
 	{
@@ -245,30 +321,30 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
 
 	if(learn_request) //A name has been asked to be learned
 	{
-		if(string(listened) == "YES I DID") //Confirm the name
+		if(string(listened) == dictionary["YES I DID"]) //Confirm the name
 		{
-			speak_this("I'm learning how "+object_to_learn+" looks like");
+			speak_this(dictionary["I'M LEARNING"]+" "+object_to_learn);
 			//cv::waitKey(5000);
 			learnAndTeach(object_to_learn);
-			speak_this("I am ready to recognize "+object_to_learn);
+			speak_this(dictionary["I'M READY TO RECOGNIZE"]+" "+object_to_learn);
 
 			learn_request = false;
 		}
-		else if(string(listened) == "NO" || string(listened) == "NO I DID NOT")
+		else if(string(listened) == dictionary["NO"] || string(listened) == dictionary["NO I DID NOT"])
 		{
 			learn_request = false;
-			speak_this("Can you repeat the name of the object please");
+			speak_this(dictionary["CAN YOU REPEAT THE NAME OF THE OBJECT PLEASE"]);
 			//cv::waitKey(5000);
 		}
 		else
 			return;
 	}
 
-	else if(string(listened) == "CUBE E O WHAT IS THIS" || string(listened) == "DO YOU KNOW WHAT THIS IS" ||
-			string(listened) == "WHAT IS THIS CUBE E O" || string(listened) == "WHAT IS THIS" )
+	else if(string(listened) == dictionary["Q B O WHAT IS THIS"] || string(listened) == dictionary["DO YOU KNOW WHAT THIS IS"] ||
+			string(listened) == dictionary["WHAT IS THIS Q B O"] || string(listened) == dictionary["WHAT IS THIS"] )
 	{
 
-		speak_this("Let me see it");
+		speak_this(dictionary["LET ME SEE IT"]);
 
 		//cv::waitKey(3000);
 
@@ -276,15 +352,12 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
 		string recognized_object = recognize();
 
 		if(recognized_object != "")
-		{	//speak_this("This is a "+recognized_object);
-			if(recognized_object == "PENGUIN")
-				speak_this("I got it. I think it is "+recognized_object);
-			else if(recognized_object == "MYSELF")
-				speak_this("Oh. This is me. Nice");
-			else if(recognized_object =="CUBE E O")
+		{	
+			if(recognized_object == "MYSELF")
+				speak_this(dictionary["OH. THIS IS ME. NICE"]);
+			else if(recognized_object =="QBO")
 			{
-
-				speak_this("Oh. It's a q b o. Cool");
+				speak_this(dictionary["OH. IT'S A Q B O. COOL"]);
 				
 				/*
 				speak_this("Interesting. It looks like a Q b o. Let me check who he is");
@@ -311,17 +384,16 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
 			command = "roslaunch qbo_stereo_selector qbo_stereo_selector.launch &";
 		        system(command.c_str());
 			*/
+			}
+		else
+			speak_this(dictionary["I GOT IT. I THINK IT IS A"]+" "+recognized_object);
 		}
 		else
-			speak_this("I got it. I think it is a "+recognized_object);
-
-		}
-		else
-			speak_this("I don't know");
+			speak_this(dictionary["I DON'T KNOW"]);
 	}
-	else if(string(listened) == "WHO IS THIS")
+	else if(string(listened) == dictionary["WHO IS THIS"])
 	{
-		speak_this("Let me see");
+		speak_this(dictionary["LET ME SEE"]);
 
 		//cv::waitKey(3000);
 
@@ -330,10 +402,10 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
 
 
 		if(recognized_object == "MYSELF")
-			speak_this("Oh. This is me. Nice");
-		else if(recognized_object =="CUBE E O")
+			speak_this(dictionary["OH. THIS IS ME. NICE"]);
+		else if(recognized_object =="QBO")
 		{
-			speak_this("Oh. It's a q b o. Cool");
+			speak_this(dictionary["OH. IT'S A Q B O. COOL"]);
 		
 			/*
 				speak_this("Interesting. It looks like a Q b o. Let me check who he is");
@@ -364,93 +436,50 @@ void listenerCallback(const qbo_listen::ListenedConstPtr& msg)
                        */
 		}
 		else
-			speak_this("I don't know");
+			speak_this(dictionary["I DON'T KNOW"]);
 	}
-	else if(string(listened) == "CUBE E O THIS IS YOU" || string(listened) =="THIS IS YOU CUBE E O")
+	else if(string(listened) == dictionary["Q B O THIS IS YOU"] || string(listened) == dictionary["THIS IS YOU Q B O"])
 	{
-		speak_this("Oh. Let me see how I look.");
+		speak_this(dictionary["OH. LET ME SEE HOW I LOOK."]);
 		//cv::waitKey(5000);
 		learnAndTeach("MYSELF");
-		speak_this("Wo aw.. I am ready to recognize myself.");
+		speak_this(dictionary["WO AW.. I AM READY TO RECOGNIZE MYSELF."]);
 	}
 	else
 	{
-		vector<string> words;
-		boost::split(words, listened, boost::is_any_of(" "));
-		if(words.size()>3 && words[0]=="THIS")
+                vector<string> words;
+                boost::split_regex(words, listened, boost::regex(dictionary["Q B O THIS IS A"]+" "));
+
+		if(words.size()>=2)
 		{
+			string object_name = words[1];
 
-			//Erase THIS IS A
-			for(unsigned int i = 0; i<3;i++)
-			{
-				words.erase(words.begin());
-			}
-
-
-			string object_name;
-
-			for(unsigned int i = 0; i<words.size();i++)
-			{
-				object_name+=words[i];
-
-				if(i!=words.size()-1)
-					object_name+=" ";
-			}
-
-			speak_this("Did you say "+object_name+"?");
-			//cv::waitKey(5000);
-
+			speak_this(dictionary["DID YOU SAY"]+" "+object_name+"?");
+			
 			learn_request = true;
 			object_to_learn = object_name;
-
-
 		}
-		else if(words.size()>4 && words[0]=="CUBE" && words[3] == "THIS") //CUBE E O THIS IS A
-		{
+		else
+		{	
+                	boost::split_regex(words, listened, boost::regex(dictionary["THIS IS A"]+" "));
 
-			//Erase CUBE E O THIS IS A
-			for(unsigned int i = 0; i<6;i++)
-			{
-				words.erase(words.begin());
+			if(words.size()>=2) //Q B O THIS IS A
+			{	
+				string object_name = words[1];
+
+				speak_this(dictionary["DID YOU SAY"]+" "+object_name+"?");
+
+				learn_request = true;
+				object_to_learn = object_name;
 			}
-
-
-			string object_name;
-
-			for(unsigned int i = 0; i<words.size();i++)
-			{
-				object_name+=words[i];
-
-				if(i!=words.size()-1)
-					object_name+=" ";
-			}
-
-			speak_this("Did you say "+object_name+"?");
-			//cv::waitKey(5000);
-
-			learn_request = true;
-			object_to_learn = object_name;
-
-
 		}
 
-		else if(words.size()>3 && words[0]=="PLEASE" && words[1] == "FOR") //PLEASE FOR GET
+		words.clear();
+                boost::split_regex(words, listened, boost::regex(dictionary["PLEASE FOR GET"]+" "));
+
+		if(words.size()>=2) //PLEASE FOR GET
 		{
-			//Erase PLEASE FOR GET
-			for(unsigned int i = 0; i<3;i++)
-			{
-				words.erase(words.begin());
-			}
-
-			string object_name;
-
-			for(unsigned int i = 0; i<words.size();i++)
-			{
-				object_name+=words[i];
-
-				if(i!=words.size()-1)
-					object_name+=" ";
-			}
+			string object_name = words[1];
 
 			forget_object(object_name);
 		}
@@ -461,20 +490,43 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "orbit_demo");
 
-	ros::NodeHandle private_nh_;
+	private_nh_ = new ros::NodeHandle;
 
-	client_talker = private_nh_.serviceClient<qbo_talk::Text2Speach>("/qbo_talk/festival_say_no_wait");
-	client_self_recognizer = private_nh_.serviceClient<qbo_self_recognizer::QboRecognize>("qbo_self_recognizer/recognize");
-	client_learn = private_nh_.serviceClient<qbo_object_recognition::LearnNewObject>("/qbo_object_recognition/learn");
-	client_teach = private_nh_.serviceClient<qbo_object_recognition::Teach>("/qbo_object_recognition/teach");
-	client_recognize = private_nh_.serviceClient<qbo_object_recognition::RecognizeObject>("/qbo_object_recognition/recognize_with_stabilizer");
-	client_update= private_nh_.serviceClient<qbo_object_recognition::Update>("/qbo_object_recognition/update");
+        string init_lang = "en";
+
+        if( private_nh_->getParam("/system_lang", init_lang))
+        {
+                ROS_INFO("System language loaded -> %s", init_lang.c_str());
+        }
+
+        /*
+        * Load dictionary
+        */
+        loadDictionary(init_lang);
+
+	ROS_INFO("Dictionary loaded");
+
+	
+        /*
+        * Subscribe to system languange topic 
+        */
+        system_lang_sub= private_nh_->subscribe<std_msgs::String>("/system_lang",1,&system_langCallback);
+
+
+
+
+	client_talker = private_nh_->serviceClient<qbo_talk::Text2Speach>("/qbo_talk/festival_say_no_wait");
+	client_self_recognizer = private_nh_->serviceClient<qbo_self_recognizer::QboRecognize>("qbo_self_recognizer/recognize");
+	client_learn = private_nh_->serviceClient<qbo_object_recognition::LearnNewObject>("/qbo_object_recognition/learn");
+	client_teach = private_nh_->serviceClient<qbo_object_recognition::Teach>("/qbo_object_recognition/teach");
+	client_recognize = private_nh_->serviceClient<qbo_object_recognition::RecognizeObject>("/qbo_object_recognition/recognize_with_stabilizer");
+	client_update= private_nh_->serviceClient<qbo_object_recognition::Update>("/qbo_object_recognition/update");
 
 	//listener_sub =private_nh_.subscribe<qbo_listen::Listened>("/listen/en_object_recog",1,&listenerCallback);
-	listener_sub =private_nh_.subscribe<qbo_listen::Listened>("/listen/en_default",1,&listenerCallback);
+//	listener_sub =private_nh_->subscribe<qbo_listen::Listened>("/listen/en_default",1,&listenerCallback);
 
 	//Subscribe to stereo selector images
-        ros::Subscriber	image_sub=private_nh_.subscribe<sensor_msgs::Image>("/qbo_stereo_selector/object",1,&stereoSelectorCallback);
+        ros::Subscriber	image_sub=private_nh_->subscribe<sensor_msgs::Image>("/qbo_stereo_selector/object",1,&stereoSelectorCallback);
 	
 	ROS_INFO("Demo 2 Launched. Ready for incoming orders");
 

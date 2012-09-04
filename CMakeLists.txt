@@ -30,10 +30,8 @@ rosbuild_gensrv()
 #target_link_libraries(example ${PROJECT_NAME})
 
 
-rosbuild_add_executable(orbit_demo_lang src/orbit_demo_lang.cpp)
 rosbuild_add_executable(orbit_demo src/orbit_demo.cpp)
 rosbuild_add_executable(orbit_client src/orbit_client.cpp src/Orbit.cpp src/OrbitObject.cpp)
 
-target_link_libraries(orbit_demo libboost_filesystem.so libboost_system.so)
 target_link_libraries(orbit_client libboost_filesystem.so libboost_system.so)
-target_link_libraries(orbit_demo_lang libboost_filesystem.so libboost_system.so libboost_regex.so)
+target_link_libraries(orbit_demo libboost_filesystem.so libboost_system.so libboost_regex.so)
